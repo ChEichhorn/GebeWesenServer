@@ -1,0 +1,129 @@
+<!DOCTYPE HTML>
+	<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+		<title>Heurerika's End. The Invisibility of Correctness</title> 
+		<meta name="description" content="Heurerika - The Invisibility of Nowhere">
+		
+		<script src="script/jquery-min.js" type="text/javascript" charset="utf-8"></script>
+		<script src="script/socket.js" type="text/javascript" charset="utf-8"></script>
+		
+		<script type="text/javascript" charset="utf-8">
+		
+			// 
+			$(function() {
+				// starte die verbindung
+				initSocket("video");
+				
+				var lastVideo = null;
+								
+				$('video#intro').on("start",function() {
+					console.log("start!");
+					
+					ws.send("ipad:blackout");
+					$(this).fadeOut('slow',function(){
+						
+						this.pause(); this.currentTime = 0;
+						
+						$('video#1')[0].currentTime = 0;
+						$('video#1')[0].play();
+						$('video#1').fadeIn('slow');
+						lastVideo = $('video#1')[0];
+					});
+				});
+				
+				$('video#1').on("timeupdate",function() {
+					if(this.currentTime>=this.duration && this.paused) {
+						$(this).fadeOut('slow', function(){
+							ws.send("ipad:ready");
+							$('video#pulse')[0].currentTime = 0;
+							$('video#pulse')[0].play();
+							$('video#pulse').fadeIn('slow');
+						});
+					}
+				});
+				
+				$('video#pulse').on("timeupdate",function(){
+					if(this.currentTime>=this.duration && this.paused) {
+						$(this).fadeOut('slow',function(){
+							if (lastVideo == null) {
+								$('video#intro')[0].currentTime = 0;
+								$('video#intro')[0].play();
+								$('video#intro').fadeIn('slow');
+								ws.send("ipad:start");
+							} else {
+								lastVideo.currentTime = 0;
+								lastVideo.play();
+								$(lastVideo).fadeIn('slow');
+								ws.send("ipad:blackout");
+							}
+						});
+					}
+				})
+				
+				$('video#pulse').on("change continue",function() {
+					if(this.paused) return;
+					
+					$(this).fadeOut('slow');
+					
+					switch(event.name) {
+						case "change":
+							//
+							break;
+						case "continue":
+							lastVideo	= null;
+							//
+							break;
+					}
+					$(this).fadeOut('slow',function(){
+						lastVideo.currentTime = 0;
+						lastVideo.play();
+						$(lastVideo).fadeIn('slow');
+					});
+				});
+				
+				$('#up').on("click",function(){
+					ws.send("arduino:+")
+				})
+				
+				$('#down').on("click",function(){
+					ws.send("arduino:-")
+				})
+				
+				$('#stop').on("click",function(){
+					ws.send("arduino:#")
+				})
+				
+			})	
+		</script>
+		
+		<link rel="stylesheet" href="styles/video.css" type="text/css" media="screen" title="no title" charset="utf-8">
+		
+	</head>
+	<body>
+		<div id="controls">
+			<button id="up">
+				+
+			</button>
+		
+			<button id="down">
+				-
+			</button>
+		
+			<button id="stop">
+				#
+			</button>
+		</div>
+		<div id="video">
+			<video width="1920" height="1080" id="intro" autoplay loop>
+				<source src="vids/intro.mp4" type="video/mp4">
+			</video>
+			<video width="1920" height="1080" id="1">
+				<source src="vids/1_1.mp4" type="video/mp4">
+			</video>
+			<video width="1920" height="1080" id="pulse">
+				<source src="vids/pulse.mp4" type="video/mp4">
+			</video>
+		</div>
+	</body>
+	</html>

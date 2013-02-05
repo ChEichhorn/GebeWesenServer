@@ -1,0 +1,24 @@
+body{
+	background: black;
+
+	margin: 0px;
+	padding: 0px;
+	
+}
+
+button { 
+	background-color: #FFF; 
+	color: #000; 
+	width: 15%; 
+	border: none; 
+	font-size: 30px;
+	opacity: 0.8;
+	height: 10%;
+
+	
+	font-family: Verdana;
+	position: absolute; 
+	left: 42.5%; 
+	top: 45%;
+
+}

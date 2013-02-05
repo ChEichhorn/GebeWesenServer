@@ -1,0 +1,51 @@
+<!DOCTYPE HTML>
+	<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+		<title>Heurerika's End. The Invisibility of Correctness</title> 
+		<meta name="description" content="Heurerika - The Invisibility of Nowhere">
+	
+		<script src="script/jquery-min.js" type="text/javascript" charset="utf-8"></script>
+		<script src="script/socket.js" type="text/javascript" charset="utf-8"></script>
+		
+		<script type="text/javascript" charset="utf-8">
+			$(function() {
+				$('#container').find("#change,#continue").hide();
+				
+				// starte die verbindung
+				initSocket("ipad");
+				
+				$('body').on('blackout',function(){
+					$('#container').children().fadeOut(1000);
+				})
+				
+				$('body').on('ready',function(){
+					$('#container').find("#change,#continue").fadeIn(1000);
+				})
+				
+				$('button').on("click touch",function() {
+					ws.send("video:"+$(this).attr("id"));
+				})
+			})	
+			
+		</script>
+		
+		<link rel="stylesheet" type="text/css" href="styles/ipad.css">
+		
+	</head>
+	<body>
+		<div id="container">
+			<button id="start">
+				START
+			</button>
+		
+			<button id="change">
+				CHANGE
+			</button>
+		
+			<button id="continue">
+				CONTINUE
+			</button>
+		</div>
+	</body>
+	</html>
