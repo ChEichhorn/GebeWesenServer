@@ -16,8 +16,12 @@ void setup() {
   
   String portNames[] = Serial.list();
   println(portNames);
-  
-  port = new Serial(this, portNames[4], 9600);
+  try {
+    port = new Serial(this, portNames[0], 9600);
+  } catch (Exception e) {
+    println("CHECK YOUR SERIAL!");
+    println(e);
+  }
 }
 
 void draw() {}
@@ -25,20 +29,6 @@ void draw() {}
 void stop(){
   socket.stop();
 }
-
-void mousePressed(){
-  socket.broadcast("hello from processing!");
-}
-
-void keyPressed() {
-  if (key == 'p') {
-    socket.broadcast("ipad:hallo ipad");
-  }
-  else if (key == 'v') {
-    socket.broadcast("video:hallo video");
-  }
-}
-
 
 void websocketOnMessage(WebSocketConnection con, String msg){
   String commands[] = msg.split(":");
