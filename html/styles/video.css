@@ -4,6 +4,12 @@ body{
 	padding: 0px;
 }
 
-video:not(:first-child) {
-	display: none;
+video {
+  width: 100%;
+  height: auto;
+  position: absolute;
+}
+
+#videos {
+  position: relative;
 }
