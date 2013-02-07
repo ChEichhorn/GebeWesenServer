@@ -12,29 +12,83 @@
 		
 			// 
 			$(function() {
-				// starte die verbindung
-				initSocket("video");
-				
+							
 				var lastVideo = null;
-								
+
+        // Video fade and volume fade helper:
+        var setVolume = function(value){
+          this.volume = value;
+        }
+
+        // This RESETs everything:
+        var returnToIntro = function(){
+          console.warn("RESET!");
+          lastVideo = null;
+          
+          $('video').fadeOut(0,function(){
+            // only do this once, a.k.a. on the first element
+            this.pause(); // pause all videos! fixed double reset!
+
+            if($(this).is($('video').first())) {
+              $('video#intro')[0].volume = 0;
+              $('video#intro')[0].play();
+
+              $('video#intro').fadeIn({
+                duration: 5000,
+                step: setVolume,
+                complete: function(){
+                  console.log("RESET complete");
+                }
+              });
+              console.log("RESET in progress!");
+            }
+          });
+          console.log("RESET started!");
+          // the ipad should wait after this message until it gets the signal from the arduino,
+          // that the start position was reached
+          ws.send("ipad:reset");
+        }
+
+				// Handle the jumping from one video scene to another
+        var upgradeScene = function(){
+          var currentVideo = lastVideo;
+          // get the index of the scene videos:
+          var index = $('video:not(.base)').index($(currentVideo))
+          console.log("Upgrading scene from index: ",index);
+
+          // get the next one
+          var nextVideo = $('video:not(.base)').eq(index+1)
+          console.log("Next Video is: ", nextVideo);
+          // Fall back to null, if we got an empty list
+          lastVideo = nextVideo.size()>0 ? nextVideo[0] : null;
+        }
+
+        // Start was pressed:
 				$('video#intro').on("start",function() {
-					console.log("start!");
-					
-					ws.send("ipad:blackout");
-					$(this).fadeOut('slow',function(){
-						
-						this.pause(); this.currentTime = 0;
-						
-						$('video#1')[0].currentTime = 0;
-						$('video#1')[0].play();
-						$('video#1').fadeIn('slow');
-						lastVideo = $('video#1')[0];
+  				console.log("start!");
+          ws.send("ipad:blackout");
+					$(this).fadeOut({
+            duration: 'slow',
+            step: setVolume,
+            complete: function(){
+						  this.pause(); this.currentTime = 0;
+					  	$('video#1')[0].currentTime = 0;
+						  $('video#1')[0].play();
+					  	$('video#1').fadeIn('slow');
+					  	lastVideo = $('video#1')[0];
+            }
 					});
 				});
 				
-				$('video#1').on("timeupdate",function() {
-					if(this.currentTime>=this.duration && this.paused) {
-						$(this).fadeOut('slow', function(){
+        // Each video observes its currentTime
+        $('video:not(.base)').on("timeupdate",function() {
+          var isFading   = $(this).hasClass("fading");
+          var endReached = this.currentTime >= parseInt($(this).data("duration"));
+  				if( endReached && !isFading && !this.paused ) {
+            $(this).addClass("fading");
+						$(this).fadeOut('slow', function() {
+              $(this).removeClass("fading");
+              this.pause();
 							ws.send("ipad:ready");
 							$('video#pulse')[0].currentTime = 0;
 							$('video#pulse')[0].play();
@@ -47,11 +101,8 @@
 					if(this.currentTime>=this.duration && this.paused) {
 						$(this).fadeOut('slow',function(){
 							if (lastVideo == null) {
-								$('video#intro')[0].currentTime = 0;
-								$('video#intro')[0].play();
-								$('video#intro').fadeIn('slow');
-								ws.send("ipad:start");
-							} else {
+                returnToIntro();
+						  } else {
 								lastVideo.currentTime = 0;
 								lastVideo.play();
 								$(lastVideo).fadeIn('slow');
@@ -61,21 +112,30 @@
 					}
 				})
 				
-				$('video#pulse').on("change continue",function() {
+				$('video#pulse').on("change continue",function(event) {
+          console.log("pulse reacting on :", event.type);
 					if(this.paused) return;
 					
+          ws.send("ipad:blackout");
 					$(this).fadeOut('slow');
 					
-					switch(event.name) {
+					switch(event.type) {
 						case "change":
-							//
+							// do nothing, lastVideo does not change, so we can play it again (sam)
+              console.log("user pressed change, playing same scene again",lastVideo);
 							break;
 						case "continue":
-							lastVideo	= null;
-							//
+              console.log("user pressed continue, upgrading scene");
+              upgradeScene();
 							break;
 					}
 					$(this).fadeOut('slow',function(){
+            this.pause(); // Pause the pulse
+            if(lastVideo == null) {
+              console.warn("lastVideo not set, returning to intro!");
+              returnToIntro();
+              return;
+            }
 						lastVideo.currentTime = 0;
 						lastVideo.play();
 						$(lastVideo).fadeIn('slow');
@@ -93,37 +153,32 @@
 				$('#stop').on("click",function(){
 					ws.send("arduino:#")
 				})
+
+        // Kick it off:
+        $('video:not(:first-child)').fadeOut(0);
+				initSocket("video",returnToIntro, '#intro,#pulse');
 				
 			})	
 		</script>
 		
-		<link rel="stylesheet" href="styles/video.css" type="text/css" media="screen" title="no title" charset="utf-8">
+		<link rel="stylesheet" href="styleautobuffers/video.css" type="text/css" media="screen" title="no title" charset="utf-8">
 		
 	</head>
 	<body>
 		<div id="controls">
-			<button id="up">
-				+
-			</button>
-		
-			<button id="down">
-				-
-			</button>
-		
-			<button id="stop">
-				#
-			</button>
+			<button id="up">+</button>
+			<button id="down">-</button>
+			<button id="stop">#</button>
 		</div>
-		<div id="video">
-			<video width="1920" height="1080" id="intro" autoplay loop>
-				<source src="vids/intro.mp4" type="video/mp4">
-			</video>
-			<video width="1920" height="1080" id="1">
-				<source src="vids/1_1.mp4" type="video/mp4">
-			</video>
-			<video width="1920" height="1080" id="pulse">
-				<source src="vids/pulse.mp4" type="video/mp4">
-			</video>
-		</div>
+
+		<div id="videos">
+			<video class="base" id="intro" src="vids/intro.mp4" type="video/mp4" autobuffer loop ></video>
+			<video class="base" id="pulse" src="vids/pulse.mp4" type="video/mp4" autobuffer></video>
+			
+      <!-- Scenes -->
+      <video id="1" data-duration="5" src="vids/1_1.mp4" type="video/mp4" autobuffer></video>
+
+			<video id="2" data-duration="5" src="vids/1_2.mp4" type="video/mp4" autobuffer></video>
+	</div>
 	</body>
 	</html>

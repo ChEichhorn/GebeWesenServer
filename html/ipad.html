@@ -13,19 +13,37 @@
 				$('#container').find("#change,#continue").hide();
 				
 				// starte die verbindung
-				initSocket("ipad");
+				initSocket("ipad", undefined, 'body');
 				
-				$('body').on('blackout',function(){
-					$('#container').children().fadeOut(1000);
-				})
-				
-				$('body').on('ready',function(){
-					$('#container').find("#change,#continue").fadeIn(1000);
-				})
-				
-				$('button').on("click touch",function() {
+        var $all = $('#container').children();
+        var $changeAndContinue = 	$('#container').find("#change,#continue");
+        var $start = $('#start')
+
+        // have this a single callback to bind and un-bind
+        var onClickTouch = function() {
 					ws.send("video:"+$(this).attr("id"));
+				}
+
+				$('body').on('blackout',function(){
+  				$all.fadeOut(1000);
+          $('button').off("click touch")
 				})
+				
+				$('body').on('reset',function(event){
+					$('#container').children().fadeOut(1000,function(){
+            if ($(this).is('#start')) {
+              $start.fadeIn(1000);
+              $('button').off("click touch").on("click touch",onClickTouch)
+            }
+          });
+				})
+				
+				$('body').on('ready',function(event){
+  			  $changeAndContinue.fadeIn(1000,function(){
+            $('button').off("click touch").on("click touch",onClickTouch)
+          });
+				})
+				
 			})	
 			
 		</script>

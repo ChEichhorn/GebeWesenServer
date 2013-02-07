@@ -1,9 +1,9 @@
 var ws = null;
-var host = "Christophs-MacBook-Air.local"
+var host = "wesen.local"
 var port = 8080
 var socket = "p5websocket"
 
-var initSocket = function(target){
+var initSocket = function(target,onready,triggerElements){
 	console.log("trying to open a websocket... target is:",target)
 	var _socket = (undefined==socket)?"":"/"+socket
 	
@@ -15,7 +15,8 @@ else ws = new WebSocket (_url);
 	// When the connection is open, send some data to the server
 	ws.onopen = function () {
 	  console.log("opened")
-	  ws.send('Ping'); // Send the message 'Ping' to the server
+	  // ws.send('Ping'); // Send the message 'Ping' to the server
+    if (onready!=undefined) onready(); 
 	};
 
 	// oh, it did close
@@ -31,12 +32,13 @@ else ws = new WebSocket (_url);
 	ws.onmessage = function (e) {
 		console.log("RAW: ",e.data);
 		var message = e.data.split(":");
-		if (message.length < 2) return;
+		if (!(message instanceof Array) && message.length < 2) return;
+
+		var currentTarget = message.shift();
+		if ( target != currentTarget) return;
 		
-		var target = message[0];
-		if ( target != target) return;
-		
-	  	console.log('Message: ' + message[1], "Target: "+target);
-		$('*').trigger(message[1]);
+	  console.log('Message: ' + message[0], "Target: "+currentTarget);
+    var te = $.Event(message.shift(), message);
+		$(triggerElements || '*').trigger(te);
 	};
 }
