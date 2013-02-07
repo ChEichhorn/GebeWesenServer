@@ -1,5 +1,5 @@
 var ws = null;
-var host = "wesen.local"
+var host = "localhost"
 var port = 8080
 var socket = "p5websocket"
 
