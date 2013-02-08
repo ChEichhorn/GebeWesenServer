@@ -24,7 +24,8 @@
         var returnToIntro = function(){
           console.warn("RESET!");
           lastVideo = null;
-          
+          ws.send("arduino:+");
+
           $('video').fadeOut(0,function(){
             // only do this once, a.k.a. on the first element
             this.pause(); // pause all videos! fixed double reset!
@@ -61,6 +62,7 @@
           console.log("Next Video is: ", nextVideo);
           // Fall back to null, if we got an empty list
           lastVideo = nextVideo.size()>0 ? nextVideo[0] : null;
+          if(lastVideo!=null) ws.send("arduino:-");
         }
 
         // Start was pressed:
@@ -89,6 +91,7 @@
 						$(this).fadeOut('slow', function() {
               $(this).removeClass("fading");
               this.pause();
+              ws.send("arduino:#");
 							ws.send("ipad:ready");
 							$('video#pulse')[0].currentTime = 0;
 							$('video#pulse')[0].play();
@@ -161,7 +164,7 @@
 			})	
 		</script>
 		
-		<link rel="stylesheet" href="styleautobuffers/video.css" type="text/css" media="screen" title="no title" charset="utf-8">
+		<link rel="stylesheet" href="styles/video.css" type="text/css" media="screen" title="no title" charset="utf-8">
 		
 	</head>
 	<body>
@@ -176,9 +179,8 @@
 			<video class="base" id="pulse" src="vids/pulse.mp4" type="video/mp4" autobuffer></video>
 			
       <!-- Scenes -->
-      <video id="1" data-duration="5" src="vids/1_1.mp4" type="video/mp4" autobuffer></video>
-
+	      	<video id="1" data-duration="5" src="vids/1_1.mp4" type="video/mp4" autobuffer></video>
 			<video id="2" data-duration="5" src="vids/1_2.mp4" type="video/mp4" autobuffer></video>
-	</div>
+		</div>
 	</body>
-	</html>
+</html>
