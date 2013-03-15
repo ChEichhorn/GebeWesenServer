@@ -7,6 +7,10 @@
 // +: upwards permanent
 // -: downwards permanent
 // #: halt
+//
+// Reports
+// u: if on upper edge
+// l: if on lower edge
 
 const int torque = 0;
 static int stepSize = 16;
@@ -86,10 +90,14 @@ boolean atUpperEnd(){
 
 boolean atLowerEnd(){
   boolean state = direction < 0 && digitalRead(lowFuse) == HIGH;
-  if(state) Serial.write('u');
+  if(state) Serial.write('l');
   return state;
 }
 
+
+boolean checkBounds(){
+  return atUpperEnd() || atLowerEnd();
+}
 
 void setup() {
   Serial.begin(9600);
@@ -103,6 +111,9 @@ void setup() {
   setDirection(0);
   
   pinMode(5,OUTPUT);
+  
+  // check if on any edge @setup
+  checkBounds();
 }
 
 void loop() {
@@ -143,7 +154,7 @@ void loop() {
     }
   }
 
-  if( atUpperEnd() || atLowerEnd() ) {
+  if( checkBounds() ) {
     // Stop the movement
     setDirection(0);
   }
