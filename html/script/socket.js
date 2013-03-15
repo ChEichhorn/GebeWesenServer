@@ -10,7 +10,7 @@ var initSocket = function(target,onready,triggerElements){
 	_url = "ws://"+host+":"+port+_socket
 	
 	if ('MozWebSocket' in window) ws = new MozWebSocket (_url);
-else ws = new WebSocket (_url);
+  else ws = new WebSocket (_url);
 	
 	// When the connection is open, send some data to the server
 	ws.onopen = function () {
@@ -41,4 +41,6 @@ else ws = new WebSocket (_url);
     var te = $.Event(message.shift(), message);
 		$(triggerElements || '*').trigger(te);
 	};
+  
+  return ws;
 }
