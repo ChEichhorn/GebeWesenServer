@@ -6,6 +6,7 @@
 // 1-4: stepsize 1,2,4,8,16
 // +: upwards permanent
 // -: downwards permanent
+// r: report state od edges
 // #: halt
 //
 // Reports
@@ -94,9 +95,13 @@ boolean atLowerEnd(){
   return state;
 }
 
-
 boolean checkBounds(){
   return atUpperEnd() || atLowerEnd();
+}
+
+void reportBounds(){
+  if (!checkBounds())
+    if(digitalRead(lowFuse) == LOW && digitalRead(highFuse) == LOW) Serial.write('f'); // In free state
 }
 
 void setup() {
@@ -150,6 +155,9 @@ void loop() {
         break;
       case '4':
         stepSize = 16;
+        break;
+      case 'r':
+        reportBounds();
         break;
     }
   }
