@@ -17,7 +17,7 @@ void setup() {
   String portNames[] = Serial.list();
   println(portNames);
   try {
-    port = new Serial(this, portNames[4], 9600);
+    port = new Serial(this, portNames[0], 9600);
   } catch (Exception e) {
     println("CHECK YOUR SERIAL!");
     println(e);
