@@ -13,18 +13,34 @@
 			// 
 			$(function() {
 							
-				var lastVideo = null;
+				var lastVideo = null,
+            isLastVideo = false,
+            edgeState = 0; // 0: free, -1: lower, 1: upper
 
         // Video fade and volume fade helper:
         var setVolume = function(value){
           this.volume = value;
         }
 
+        // Observe the arduinos edges
+        $('#intro').on('upper',function(){
+          console.warn("Arduino is on upper edge");
+          edgeState =  1;
+        }).on('free',function(){
+          console.log("Arduino is free");
+          edgeState =  0;
+         }).on('lower',function(){
+          console.warn("Arduino is on lower edge");
+          edgeState = -1;
+        });
+
         // This RESETs everything:
         var returnToIntro = function(){
           console.warn("RESET!");
           lastVideo = null;
           ws.send("arduino:+");
+          ws.send("arduino:r");
+
 
           $('video').fadeOut(0,function(){
             // only do this once, a.k.a. on the first element
@@ -38,7 +54,22 @@
                 duration: 5000,
                 step: setVolume,
                 complete: function(){
-                  console.log("RESET complete");
+                  // make sure the arduino is on the upper edge
+                  var ok = false;
+                  var checkerID;
+                  var checker = function(){
+                    // check for the arduinos state
+                    if(edgeState == 1) {
+                      if(checkerID)clearTimeout(checkerID);
+                      console.log("RESET complete");
+                      return true;
+                    } else {
+                      console.log("Arduino still in reset progress....");
+                      checkerID = setTimeout(checker,1000);
+                      return false;
+                    }
+                  };
+                  if (!checker()) checkerID = setTimeout(checker, 1000);
                 }
               });
               console.log("RESET in progress!");
@@ -52,16 +83,22 @@
 
 				// Handle the jumping from one video scene to another
         var upgradeScene = function(){
-          var currentVideo = lastVideo;
+          var currentVideo = lastVideo,
+              $videos = $('video:not(.base)');
           // get the index of the scene videos:
-          var index = $('video:not(.base)').index($(currentVideo))
+          var index = $videos.index($(currentVideo))
           console.log("Upgrading scene from index: ",index);
 
           // get the next one
-          var nextVideo = $('video:not(.base)').eq(index+1)
+          var nextVideo = $videos.eq(index+1)
           console.log("Next Video is: ", nextVideo);
+
           // Fall back to null, if we got an empty list
           lastVideo = nextVideo.size()>0 ? nextVideo[0] : null;
+          isLastVideo = $videos.last().is(nextVideo);
+
+          console.log("Current Video is last video?",(isLastVideo ? "yes" : "no"));
+
           if(lastVideo!=null) ws.send("arduino:-");
         }
 
@@ -93,9 +130,14 @@
               this.pause();
               ws.send("arduino:#");
 							ws.send("ipad:ready");
-							$('video#pulse')[0].currentTime = 0;
-							$('video#pulse')[0].play();
-							$('video#pulse').fadeIn('slow');
+              if(isLastVideo){
+                // simply trigger the reset
+                returnToIntro();
+              } else {
+							  $('video#pulse')[0].currentTime = 0;
+							  $('video#pulse')[0].play();
+							  $('video#pulse').fadeIn('slow');
+              }
 						});
 					}
 				});
@@ -104,12 +146,14 @@
 					if(this.currentTime>=this.duration && this.paused) {
 						$(this).fadeOut('slow',function(){
 							if (lastVideo == null) {
-                returnToIntro();
+                // returnToIntro();
+                console.error("Pulse video did run on last video! Reset mus be triggered manually.");
 						  } else {
 								lastVideo.currentTime = 0;
 								lastVideo.play();
 								$(lastVideo).fadeIn('slow');
 								ws.send("ipad:blackout");
+                
 							}
 						});
 					}
@@ -175,12 +219,15 @@
 		</div>
 
 		<div id="videos">
-			<video class="base" id="intro" src="vids/intro.mp4" type="video/mp4" autobuffer loop ></video>
-			<video class="base" id="pulse" src="vids/pulse.mp4" type="video/mp4" autobuffer></video>
+			<video class="base" id="intro" src="vids/Intro.mp4" type="video/mp4" autobuffer loop ></video>
+			<video class="base" id="pulse" src="vids/Pulse.mp4" type="video/mp4" autobuffer></video>
 			
       <!-- Scenes -->
-	      	<video id="1" data-duration="5" src="vids/1_1.mp4" type="video/mp4" autobuffer></video>
-			<video id="2" data-duration="5" src="vids/1_2.mp4" type="video/mp4" autobuffer></video>
+	    <video id="1" data-duration="5" src="vids/1.mp4" type="video/mp4" autobuffer></video>
+			<video id="2" data-duration="5" src="vids/2.mp4" type="video/mp4" autobuffer></video>
+			<video id="3" data-duration="5" src="vids/3.mp4" type="video/mp4" autobuffer></video>
+			<video id="4" data-duration="5" src="vids/4.mp4" type="video/mp4" autobuffer></video>
+			<video id="5" data-duration="5" src="vids/5.mp4" type="video/mp4" autobuffer></video>
 		</div>
 	</body>
 </html>
