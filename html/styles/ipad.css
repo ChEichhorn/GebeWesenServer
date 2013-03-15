@@ -1,22 +1,50 @@
-body{
-  position: absolute;
-  width: 1024px; height: 768px;
-  overflow: hidden;
-	background: black;
-
-  /* Change the upper abstand here on the first argument */
-	margin: 45% auto 0 auto;
-
-	padding: 0px;
+/* Styles for the iPad controller */
+ 
+* {
 	text-align: center;
 }
 
+body {
+  margin:0;
+  padding: 0;
+  height: 768px;
+  width: 1024px;
+  overflow: hidden;
+	background: black;
+}
+
+/* Use a container to wrap the content */
+#content {
+  position: absolute;
+  width: 1024px;
+  
+  top: 350px;
+
+  padding: 0;
+  margin:  0;
+}
+
+/* All buttons shre the same layout style */
 button { 
-	background-color: #FFF; 
+	background-color: #FFF;
 	color: #000; 
 	border: none; 
 	font-size: 60px;
 	opacity: 0.8;
-	height: 10%;
+	height:  80px;
 	font-family: Verdana;
 }
+
+/* Detailed styles for the buttons below */
+#start {
+
+}
+
+#change {
+
+}
+
+#continue {
+
+}
+
