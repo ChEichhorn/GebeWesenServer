@@ -30,6 +30,14 @@ void stop(){
   socket.stop();
 }
 
+void serialEvent(Serial port) {
+  int state = port.read();
+  switch(state) {
+    case 'u': socket.broadcast("arduino:upper"); break;
+    case 'l': socket.broadcast("arduino:lower"); break;
+  }
+}
+
 void websocketOnMessage(WebSocketConnection con, String msg){
   String commands[] = msg.split(":");
   if(commands.length > 1 && commands[0].equals("arduino")) {
