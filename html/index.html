@@ -15,6 +15,9 @@
 							
 				var lastVideo = null,
             isLastVideo = false,
+            fadeTime = 500,
+            autoFromID = 3,
+            transportTime = 20, // Time in seconds the lift decends
             edgeState = 0; // 0: free, -1: lower, 1: upper
 
         // Video fade and volume fade helper:
@@ -38,9 +41,11 @@
         var returnToIntro = function(){
           console.warn("RESET!");
           lastVideo = null;
+          isLastVideo = false;
           ws.send("arduino:+");
           ws.send("arduino:r");
 
+          $('video:not(.base)').removeClass('stopped'); // remove the lift control class from all videos
 
           $('video').fadeOut(0,function(){
             // only do this once, a.k.a. on the first element
@@ -61,10 +66,13 @@
                     // check for the arduinos state
                     if(edgeState == 1) {
                       if(checkerID)clearTimeout(checkerID);
+                      ws.send('ipad:unlock');
+                      ws.send('ipad:reset');
                       console.log("RESET complete");
                       return true;
                     } else {
                       console.log("Arduino still in reset progress....");
+                      ws.send("arduino:r");
                       checkerID = setTimeout(checker,1000);
                       return false;
                     }
@@ -78,42 +86,21 @@
           console.log("RESET started!");
           // the ipad should wait after this message until it gets the signal from the arduino,
           // that the start position was reached
-          ws.send("ipad:reset");
-        }
-
-				// Handle the jumping from one video scene to another
-        var upgradeScene = function(){
-          var currentVideo = lastVideo,
-              $videos = $('video:not(.base)');
-          // get the index of the scene videos:
-          var index = $videos.index($(currentVideo))
-          console.log("Upgrading scene from index: ",index);
-
-          // get the next one
-          var nextVideo = $videos.eq(index+1)
-          console.log("Next Video is: ", nextVideo);
-
-          // Fall back to null, if we got an empty list
-          lastVideo = nextVideo.size()>0 ? nextVideo[0] : null;
-          isLastVideo = $videos.last().is(nextVideo);
-
-          console.log("Current Video is last video?",(isLastVideo ? "yes" : "no"));
-
-          if(lastVideo!=null) ws.send("arduino:-");
+          ws.send("ipad:blackout");
         }
 
         // Start was pressed:
 				$('video#intro').on("start",function() {
-  				console.log("start!");
+  				console.log("********* Start!");
           ws.send("ipad:blackout");
 					$(this).fadeOut({
-            duration: 'slow',
+            duration: fadeTime,
             step: setVolume,
             complete: function(){
 						  this.pause(); this.currentTime = 0;
 					  	$('video#1')[0].currentTime = 0;
 						  $('video#1')[0].play();
-					  	$('video#1').fadeIn('slow');
+					  	$('video#1').fadeIn(fadeTime);
 					  	lastVideo = $('video#1')[0];
             }
 					});
@@ -121,74 +108,137 @@
 				
         // Each video observes its currentTime
         $('video:not(.base)').on("timeupdate",function() {
+          var cvid = getCurrentVideoID();
+          
+
+          // controll the lift:
+          var isStopped = $(this).hasClass('stopped');
+          if(this.currentTime >= transportTime && !isStopped) {
+            ws.send('arduino:#');
+            $(this).addClass('stopped');
+          }
+          
+          // controll the video itself
           var isFading   = $(this).hasClass("fading");
-          var endReached = this.currentTime >= parseInt($(this).data("duration"));
-  				if( endReached && !isFading && !this.paused ) {
+          var endReached = this.currentTime >= this.duration-(fadeTime/1000.0); //parseInt($(this).data("duration"));
+          // console.log(this.currentTime,this.duration,this.duration-this.currentTime,endReached);
+  				if( endReached && !isFading ) { //&& !this.paused ) {
             $(this).addClass("fading");
-						$(this).fadeOut('slow', function() {
+						$(this).fadeOut(fadeTime, function() {
               $(this).removeClass("fading");
               this.pause();
-              ws.send("arduino:#");
-							ws.send("ipad:ready");
-              if(isLastVideo){
+              if (cvid<4) ws.send("arduino:#");
+							
+              ws.send("ipad:ready");
+              if(cvid>=5){
                 // simply trigger the reset
+                // upgradeScene(); // make sure the video selection is updated too
                 returnToIntro();
-              } else {
+              }
+              else if(cvid==4) {
+                $('#pulse').trigger('continue');
+              }
+              else {
 							  $('video#pulse')[0].currentTime = 0;
 							  $('video#pulse')[0].play();
-							  $('video#pulse').fadeIn('slow');
+							  $('video#pulse').fadeIn(fadeTime);
               }
 						});
 					}
 				});
 				
+        // Scene management happens through the #pulse
+				// Handle the jumping from one video scene to another
+        var upgradeScene = function(){
+          var currentVideo = lastVideo,
+              $videos = $('video:not(.base)');
+          // get the index of the scene videos:
+          var index = $videos.index($(currentVideo))
+
+          console.log("Upgrading scene from index: ",index);
+
+          // get the next one
+          var nextVideo = $videos.eq(index+1)
+
+          console.log("Next Video is: ", nextVideo.attr("id"));
+
+          // Fall back to null, if we got an empty list
+          lastVideo = nextVideo.size()>0 ? nextVideo[0] : null;
+          isLastVideo = $videos.last().is(nextVideo);
+          
+          console.log("Next video is last video?",(isLastVideo ? "yes" : "no"));
+
+          if(getCurrentVideoID() >= autoFromID) {
+            console.log("Upgraded scene is in automatic domain, sending a lock");
+            ws.send('ipad:lock');
+          }
+
+          if(lastVideo!=null) ws.send("arduino:-");
+        }
+
+        var getCurrentVideoID = function(){
+          return lastVideo!=null ? parseInt($(lastVideo).attr("id"),10) : -1
+        }
+
 				$('video#pulse').on("timeupdate",function(){
 					if(this.currentTime>=this.duration && this.paused) {
-						$(this).fadeOut('slow',function(){
+
+						$(this).fadeOut(fadeTime,function(){
 							if (lastVideo == null) {
                 // returnToIntro();
-                console.error("Pulse video did run on last video! Reset mus be triggered manually.");
+                console.error("#Pulse video did run on last video! Reset mus be triggered manually.");
 						  } else {
-								lastVideo.currentTime = 0;
-								lastVideo.play();
-								$(lastVideo).fadeIn('slow');
-								ws.send("ipad:blackout");
-                
+                var cvidID = getCurrentVideoID();
+                console.log("Current Video ID is",cvidID);
+                if(cvidID >= autoFromID) {
+                  // trigger automatically
+                  console.log("Triggering automatically");
+                  ws.send('ipad:lock');
+                  $(this).trigger('continue');
+                } 
+                else {
+								  ws.send("ipad:blackout");
+                  $(this).trigger('change');
+                }
 							}
 						});
+
 					}
-				})
+				});
 				
 				$('video#pulse').on("change continue",function(event) {
           console.log("pulse reacting on :", event.type);
-					if(this.paused) return;
+					if(!this.paused) this.pause();
 					
           ws.send("ipad:blackout");
 					$(this).fadeOut('slow');
 					
-					switch(event.type) {
-						case "change":
+					if(event.type == "change") {
 							// do nothing, lastVideo does not change, so we can play it again (sam)
-              console.log("user pressed change, playing same scene again",lastVideo);
-							break;
-						case "continue":
-              console.log("user pressed continue, upgrading scene");
-              upgradeScene();
-							break;
+              console.log("Change triggered: playing same scene again");
 					}
-					$(this).fadeOut('slow',function(){
+          else if(event.type == "continue") {
+              console.log("Continue triggered: upgrading scene");
+              upgradeScene();
+					}
+          
+					$(this).fadeOut(fadeTime,function(){
             this.pause(); // Pause the pulse
             if(lastVideo == null) {
-              console.warn("lastVideo not set, returning to intro!");
+              console.error("lastVideo not set, returning to intro!");
               returnToIntro();
               return;
             }
+
 						lastVideo.currentTime = 0;
-						lastVideo.play();
-						$(lastVideo).fadeIn('slow');
+					  lastVideo.play();
+            $('video:not(.base)').removeClass('stopped'); // remove the lift control class from all videos
+						$(lastVideo).fadeIn(fadeTime);
 					});
 				});
 				
+
+        // Button actions for debugging:
 				$('#up').on("click",function(){
 					ws.send("arduino:+")
 				})
@@ -202,7 +252,7 @@
 				})
 
         // Kick it off:
-        $('video:not(:first-child)').fadeOut(0);
+        $('video:not(#intro)').fadeOut(0);
 				initSocket("video",returnToIntro, '#intro,#pulse');
 				
 			})	
@@ -223,11 +273,11 @@
 			<video class="base" id="pulse" src="vids/Pulse.mp4" type="video/mp4" autobuffer></video>
 			
       <!-- Scenes -->
-	    <video id="1" data-duration="5" src="vids/1.mp4" type="video/mp4" autobuffer></video>
-			<video id="2" data-duration="5" src="vids/2.mp4" type="video/mp4" autobuffer></video>
-			<video id="3" data-duration="5" src="vids/3.mp4" type="video/mp4" autobuffer></video>
-			<video id="4" data-duration="5" src="vids/4.mp4" type="video/mp4" autobuffer></video>
-			<video id="5" data-duration="5" src="vids/5.mp4" type="video/mp4" autobuffer></video>
+	    <video id="1" data-duration="45" src="vids/1.mp4" type="video/mp4" autobuffer></video>
+			<video id="2" data-duration="45" src="vids/2.mp4" type="video/mp4" autobuffer></video>
+			<video id="3" data-duration="45" src="vids/3.mp4" type="video/mp4" autobuffer></video>
+			<video id="4" data-duration="45" src="vids/4.mp4" type="video/mp4" autobuffer></video>
+			<video id="5" data-duration="45" src="vids/5.mp4" type="video/mp4" autobuffer></video>
 		</div>
 	</body>
 </html>

@@ -3,7 +3,8 @@ var host = "wesen.local"
 var port = 8080
 var socket = "p5websocket"
 
-var initSocket = function(target,onready,triggerElements){
+var initSocket = function(target,onready,triggerElements,debug){
+  
 	console.log("trying to open a websocket... target is:",target)
 	var _socket = (undefined==socket)?"":"/"+socket
 	
@@ -30,14 +31,15 @@ var initSocket = function(target,onready,triggerElements){
 	};
 
 	ws.onmessage = function (e) {
-		console.log("RAW: ",e.data);
-		var message = e.data.split(":");
+		if (debug) console.log("RAW: ",e.data);
+
+    var message = e.data.split(":");
 		if (!(message instanceof Array) && message.length < 2) return;
 
 		var currentTarget = message.shift();
 		if ( target != currentTarget) return;
 		
-	  console.log('Message: ' + message[0], "Target: "+currentTarget);
+	  if (debug) console.log('Message: ' + message[0], "Target: "+currentTarget);
     var te = $.Event(message.shift(), message);
 		$(triggerElements || '*').trigger(te);
 	};
