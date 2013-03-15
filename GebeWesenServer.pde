@@ -33,8 +33,9 @@ void stop(){
 void serialEvent(Serial port) {
   int state = port.read();
   switch(state) {
-    case 'u': socket.broadcast("arduino:upper"); break;
-    case 'l': socket.broadcast("arduino:lower"); break;
+    case 'u': socket.broadcast("video:upper"); break;
+    case 'l': socket.broadcast("video:lower"); break;
+    case 'f': socket.broadcast("video:free"); break;
   }
 }
 
