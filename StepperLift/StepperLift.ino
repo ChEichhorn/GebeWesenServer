@@ -79,11 +79,15 @@ void setDirection(int dir) {
 }
 
 boolean atUpperEnd(){
-  return direction > 0 && digitalRead(highFuse) == HIGH;
+  boolean state = direction > 0 && digitalRead(highFuse) == HIGH;
+  if(state) Serial.write('u');
+  return state;
 }
 
 boolean atLowerEnd(){
-  return direction < 0 && digitalRead(lowFuse) == HIGH;
+  boolean state = direction < 0 && digitalRead(lowFuse) == HIGH;
+  if(state) Serial.write('u');
+  return state;
 }
 
 
