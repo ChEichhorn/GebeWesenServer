@@ -17,6 +17,8 @@
             isLastVideo = false,
             fadeTime = 500,
             pauseOnEnd = 3500,
+            lockFlashCount = 3,  // how many times it should flash on interaction while locked
+            lockFlashSpeed = 50, // in milliseconds!
             autoFromID = 3,
             numVideos = $('video:not(.base)').size();
             transportTime = 20, // Time in seconds the lift decends
@@ -28,6 +30,24 @@
         var setVolume = function(value){
           this.volume = value;
         }
+
+        // Locking utilities:
+        var lock = function(){
+          $('body').addClass('locked');
+          ws.send('ipad:lock');
+          console.warn("System is locked!");
+        };
+
+        var unlock = function(){
+          $('body').removeClass('locked');
+          ws.send('ipad:unlock');
+          console.warn("System is un-locked!");
+        };
+
+        var isLocked = function(){
+          return $('body').hasClass('locked');
+        };
+
 
         // Observe the arduinos edges
         $('#intro').on('upper',function(){
@@ -72,7 +92,7 @@
                     // check for the arduinos state
                     if(edgeState == 1) {
                       if(checkerID)clearTimeout(checkerID);
-                      ws.send('ipad:unlock');
+                      unlock(); // unlock to enable ipad interaction
                       ws.send('ipad:reset');
                       console.log("RESET complete");
                       return true;
@@ -203,7 +223,7 @@
 
           if(getCurrentVideoID() >= autoFromID) {
             console.log("Upgraded scene is in automatic domain, sending a lock");
-            ws.send('ipad:lock');
+            lock();
           }
 
           if(lastVideo!=null) ws.send("arduino:-");
@@ -226,7 +246,7 @@
                 if(cvidID >= autoFromID) {
                   // trigger automatically
                   console.log("Triggering automatically");
-                  ws.send('ipad:lock');
+                  lock(); // make sure we are locked! 
                   $(this).trigger('continue');
                 } 
                 else {
@@ -238,9 +258,33 @@
 
 					}
 				});
-				
+
+
+        var showLock = function(){
+          var $locker = $('#locker');
+          var flash,_flashCount = 0;
+          flash = function(){
+            $locker.fadeIn(lockFlashSpeed,function(){
+              _flashCount++;
+              if(_flashCount<=lockFlashCount)
+                $locker.fadeOut(lockFlashSpeed,flash);  
+              else
+                $locker.fadeOut(lockFlashSpeed);  
+            });
+          }
+          flash();
+        }
+
+
 				$('video#pulse').on("change continue",function(event) {
           console.log("pulse reacting on :", event.type);
+
+          // If the system is locked, deal with it here and return early
+          if (isLocked()) {
+            showLock();
+            return false;
+          }
+
 					if(!this.paused) this.pause();
 					
           ws.send("ipad:blackout");
@@ -289,6 +333,8 @@
 
         $('#reset').on("click",returnToIntro);
 
+        $('#testlocker').on('click',showLock);
+
         $(document).on('keydown',function(e){
           switch(e.which){
             case 32:
@@ -299,8 +345,9 @@
         });        
 
         // Kick it off:
-        $('#controls').fadeToggle(0,false);
-        $('video:not(#intro)').fadeOut(0);
+        $('#controls').fadeToggle(0,false),
+        $('video:not(#intro)').fadeOut(0),
+        $('#locker').fadeOut(0);
 				initSocket("video",returnToIntro, '#intro,#pulse');
 				
 			})	
@@ -315,8 +362,11 @@
 			<span>UP: <button id="up">+</button></span>
 			<span>DOWN: <button id="down">-</button></span>
 			<span>STOP: <button id="stop">#</button></span>
+      <span>      <button id="testlocker">Show the lock effect</button></span>
       <span>      <button id="reset">Reset!</button></span>
 		</div>
+
+    <div id="locker"></div>
 
 		<div id="videos">
 			<video class="base" id="intro" src="vids/Intro.mp4" type="video/mp4" autobuffer loop ></video>
