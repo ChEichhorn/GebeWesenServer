@@ -45,11 +45,22 @@ button:active {
 
 }
 
+#start:active {
+  background: yellow;
+}
+
 #change {
 
+}
+
+#change:active {
+  background: green;
 }
 
 #continue {
 
 }
 
+#continue:active {
+  
+}
