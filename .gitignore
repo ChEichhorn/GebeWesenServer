@@ -5,3 +5,5 @@
 *.swp
 
 html/.index.html.swp
+
+*.swo
