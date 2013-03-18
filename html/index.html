@@ -142,6 +142,8 @@
               secondLastVideo = numVideos-1,
               endTime = this.duration-(fadeTime/1000.0);
 
+          var notFirst = cvid > 1;
+
           // The transport time depends on the video id.
           // On the last two videos run full length, else use preset transport time
           var _transportTime = cvid >= secondLastVideo ? this.duration : transportTime; 
@@ -151,7 +153,7 @@
 
           // Mark the steppers as stopped through a class on the video element
           // This fires once, if the video does not have a stopped class
-          if(this.currentTime >= _transportTime && !$(this).hasClass('stopped')) {
+          if(this.currentTime >= _transportTime && !$(this).hasClass('stopped') && notFirst) {
             console.warn("Transport time of "+_transportTime+" reached! Stopping steppers");
             ws.send('arduino:#'); // actually stop the steppers
             $(this).addClass('stopped');
@@ -175,7 +177,9 @@
 
               // Signal the ipad, we are ready to listen to new commands, if NOT on lastVideo
               // !! This results in a short, intened, flash of the UI on the ipad !!
-              if (cvid >= numVideos) ws.send("ipad:ready");
+              if (cvid < numVideos) {
+                ws.send("ipad:ready");
+              }
 
               if(cvid >= numVideos){
                 // We have reached the very end of a session, stop the steppers!
