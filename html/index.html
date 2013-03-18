@@ -61,6 +61,7 @@
           edgeState = -1;
         });
 
+
         // This RESETs everything:
         var returnToIntro = function(){
           console.warn("RESET!");
@@ -188,7 +189,7 @@
                 setTimeout(returnToIntro, pauseOnEnd);
               }
               else if(cvid == secondLastVideo) {
-                $('#pulse').trigger('continue');
+                $('#pulse').trigger('continue',[true]); // force reaction!
               }
               else {
                 // Make sure the arduino is stopped!
@@ -251,11 +252,11 @@
                   // trigger automatically
                   console.log("Triggering automatically");
                   lock(); // make sure we are locked! 
-                  $(this).trigger('continue');
+                  $(this).trigger('continue',[true]);
                 } 
                 else {
 								  ws.send("ipad:blackout");
-                  $(this).trigger('change');
+                  $(this).trigger('change',[true]);
                 }
 							}
 						});
@@ -280,11 +281,11 @@
         }
 
 
-				$('video#pulse').on("change continue",function(event) {
+				$('video#pulse').on("change continue",function(event,force) {
           console.log("pulse reacting on :", event.type);
 
           // If the system is locked, deal with it here and return early
-          if (isLocked()) {
+          if (!force && isLocked()) {
             showLock();
             return false;
           }
