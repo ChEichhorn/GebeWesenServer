@@ -4,17 +4,6 @@ body{
 	padding: 0px;
 }
 
-#locker {
-  position: absolute;
-  z-index: 999;
-  background:rgba(255,0,0,0.7);
-  width:100%;
-  height: 100%;
-  top:0; left:0;
-  margin: 0;
-  padding:0;
-}
-
 video {
   width: 100%;
   height: auto;

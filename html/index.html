@@ -6,6 +6,7 @@
 		<meta name="description" content="Heurerika - The Invisibility of Nowhere">
 		
 		<script src="script/jquery-min.js" type="text/javascript" charset="utf-8"></script>
+		<script src="script/locker.js" type="text/javascript" charset="utf-8"></script>
 		<script src="script/socket.js" type="text/javascript" charset="utf-8"></script>
 		
 		<script type="text/javascript" charset="utf-8">
@@ -25,6 +26,9 @@
             edgeState = 0; // 0: free, -1: lower, 1: upper
 
         console.log("Starting Heurerikas End with "+numVideos+" videos");
+
+        // Add and setup a lock flasher:
+        $(document).locker();
 
         // Video fade and volume fade helper:
         var setVolume = function(value){
@@ -265,28 +269,13 @@
 				});
 
 
-        var showLock = function(){
-          var $locker = $('#locker');
-          var flash,_flashCount = 0;
-          flash = function(){
-            $locker.fadeIn(lockFlashSpeed,function(){
-              _flashCount++;
-              if(_flashCount<=lockFlashCount)
-                $locker.fadeOut(lockFlashSpeed,flash);  
-              else
-                $locker.fadeOut(lockFlashSpeed);  
-            });
-          }
-          flash();
-        }
-
 
 				$('video#pulse').on("change continue",function(event,force) {
           console.log("pulse reacting on :", event.type);
 
           // If the system is locked, deal with it here and return early
           if (!force && isLocked()) {
-            showLock();
+            $(this).showLock(lockFlashCount,lockFlashSpeed);
             return false;
           }
 
@@ -338,7 +327,7 @@
 
         $('#reset').on("click",returnToIntro);
 
-        $('#testlocker').on('click',showLock);
+        $('#testlocker').on('click',function(){ $(this).showLock() } );
 
         $(document).on('keydown',function(e){
           switch(e.which){
@@ -352,7 +341,6 @@
         // Kick it off:
         $('#controls').fadeToggle(0,false),
         $('video:not(#intro)').fadeOut(0),
-        $('#locker').fadeOut(0);
 				initSocket("video",returnToIntro, '#intro,#pulse');
 				
 			})	
@@ -370,8 +358,6 @@
       <span>      <button id="testlocker">Show the lock effect</button></span>
       <span>      <button id="reset">Reset!</button></span>
 		</div>
-
-    <div id="locker"></div>
 
 		<div id="videos">
 			<video class="base" id="intro" src="vids/Intro.mp4" type="video/mp4" autobuffer loop ></video>

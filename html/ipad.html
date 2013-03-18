@@ -8,6 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 	
 		<script src="script/jquery-min.js" type="text/javascript" charset="utf-8"></script>
+		<script src="script/locker.js" type="text/javascript" charset="utf-8"></script>
 		<script src="script/socket.js" type="text/javascript" charset="utf-8"></script>
 		
 		<script type="text/javascript" charset="utf-8">
@@ -17,6 +18,8 @@
 
       // Start with jQuery loaded:
 			$(function() {
+        $(document).locker();
+
 				$('#container').find("#change,#continue").hide();
 				
         var events = "pressed touchstart";
@@ -30,6 +33,7 @@
 
         // have this a single callback to bind and un-bind
         var onClickTouch = function() {
+          if($('body').hasClass("locked")) $(this).showLock(3,50);  // flash the lock, baby
 					ws.send("video:"+$(this).attr("id"));
 				}
 
@@ -37,6 +41,12 @@
   				$all.fadeOut(1000);
           $('button').off(events)
 				})
+
+        $('body').on("lock",function(event){
+          $(this).addClass("locked");
+        }).on("unlock",function(event){
+          $(this).removeClass("locked");
+        });
 				
 				$('body').on('reset',function(event){
 					$('#container').children().fadeOut(1000,function(){
