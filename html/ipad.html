@@ -11,6 +11,11 @@
 		<script src="script/socket.js" type="text/javascript" charset="utf-8"></script>
 		
 		<script type="text/javascript" charset="utf-8">
+     // Safari mobile hacks
+      document.addEventListener("touchstart",function(){},false); // to enable :active pseudo classes
+      document.ontouchmove = function(e){ e.preventDefault(); return false; }
+
+      // Start with jQuery loaded:
 			$(function() {
 				$('#container').find("#change,#continue").hide();
 				
