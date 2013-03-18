@@ -16,9 +16,13 @@
 				var lastVideo = null,
             isLastVideo = false,
             fadeTime = 500,
+            pauseOnEnd = 3500,
             autoFromID = 3,
+            numVideos = $('video:not(.base)').size();
             transportTime = 20, // Time in seconds the lift decends
             edgeState = 0; // 0: free, -1: lower, 1: upper
+
+        console.log("Starting Heurerikas End with "+numVideos+" videos");
 
         // Video fade and volume fade helper:
         var setVolume = function(value){
@@ -42,8 +46,10 @@
           console.warn("RESET!");
           lastVideo = null;
           isLastVideo = false;
-          ws.send("arduino:+");
-          ws.send("arduino:r");
+
+          ws.send("arduino:#"); // Tell the steppers to stop before going up again! Fixed hang.
+          ws.send("arduino:+"); // Go all the way up!
+          ws.send("arduino:r"); // Report the current state, to make sure the callback triggers in any case
 
           $('video:not(.base)').removeClass('stopped'); // remove the lift control class from all videos
 
@@ -105,40 +111,66 @@
             }
 					});
 				});
-				
-        // Each video observes its currentTime
-        $('video:not(.base)').on("timeupdate",function() {
-          var cvid = getCurrentVideoID();
-          
 
-          // controll the lift:
-          var isStopped = $(this).hasClass('stopped');
-          if(this.currentTime >= transportTime && !isStopped) {
-            ws.send('arduino:#');
+        // ***************** SECTION VIDEOs
+        // Handle Routing when a section video has reached its end
+        // Each video observes its currentTime
+
+        $('video:not(.base)').on("timeupdate",function() {
+          // fetch the current videos id:
+          var cvid = getCurrentVideoID(),
+              secondLastVideo = numVideos-1,
+              endTime = this.duration-(fadeTime/1000.0);
+
+          // The transport time depends on the video id.
+          // On the last two videos run full length, else use preset transport time
+          var _transportTime = cvid >= secondLastVideo ? this.duration : transportTime; 
+
+          // Make sure the _transportTime does not exceed the current videos duration
+          _transportTime = Math.min(this.duration,Math.max(_transportTime,0));
+
+          // Mark the steppers as stopped through a class on the video element
+          // This fires once, if the video does not have a stopped class
+          if(this.currentTime >= _transportTime && !$(this).hasClass('stopped')) {
+            console.warn("Transport time of "+_transportTime+" reached! Stopping steppers");
+            ws.send('arduino:#'); // actually stop the steppers
             $(this).addClass('stopped');
           }
-          
-          // controll the video itself
-          var isFading   = $(this).hasClass("fading");
-          var endReached = this.currentTime >= this.duration-(fadeTime/1000.0); //parseInt($(this).data("duration"));
+
+          // Check the time bounds of the video itself
+          var isFading   = $(this).hasClass("fading"),
+              endReached = this.currentTime >= endTime;
+
           // console.log(this.currentTime,this.duration,this.duration-this.currentTime,endReached);
-  				if( endReached && !isFading ) { //&& !this.paused ) {
+
+  				if( endReached && !isFading ) {
+
             $(this).addClass("fading");
+
 						$(this).fadeOut(fadeTime, function() {
+              // When the fading animation has finished do:
+
               $(this).removeClass("fading");
               this.pause();
-              if (cvid<4) ws.send("arduino:#");
-							
-              ws.send("ipad:ready");
-              if(cvid>=5){
-                // simply trigger the reset
-                // upgradeScene(); // make sure the video selection is updated too
-                returnToIntro();
+
+              // Signal the ipad, we are ready to listen to new commands, if NOT on lastVideo
+              // !! This results in a short, intened, flash of the UI on the ipad !!
+              if (cvid >= numVideos) ws.send("ipad:ready");
+
+              if(cvid >= numVideos){
+                // We have reached the very end of a session, stop the steppers!
+                ws.send("arduino:#");
+                // simply trigger the reset after a give pause
+                setTimeout(returnToIntro, pauseOnEnd);
               }
-              else if(cvid==4) {
+              else if(cvid == secondLastVideo) {
                 $('#pulse').trigger('continue');
               }
               else {
+                // Make sure the arduino is stopped!
+                ws.send("arduino:#");
+
+                // Fade in and start the Pulse video
 							  $('video#pulse')[0].currentTime = 0;
 							  $('video#pulse')[0].play();
 							  $('video#pulse').fadeIn(fadeTime);
@@ -152,6 +184,7 @@
         var upgradeScene = function(){
           var currentVideo = lastVideo,
               $videos = $('video:not(.base)');
+
           // get the index of the scene videos:
           var index = $videos.index($(currentVideo))
 
@@ -238,7 +271,10 @@
 				});
 				
 
-        // Button actions for debugging:
+        // *****************************
+        // Button actions for debugging
+        //
+
 				$('#up').on("click",function(){
 					ws.send("arduino:+")
 				})
@@ -251,7 +287,19 @@
 					ws.send("arduino:#")
 				})
 
+        $('#reset').on("click",returnToIntro);
+
+        $(document).on('keydown',function(e){
+          switch(e.which){
+            case 32:
+              $('#controls').fadeToggle('slow');
+              return false;
+            break;
+          }
+        });        
+
         // Kick it off:
+        $('#controls').fadeToggle(0,false);
         $('video:not(#intro)').fadeOut(0);
 				initSocket("video",returnToIntro, '#intro,#pulse');
 				
@@ -263,9 +311,11 @@
 	</head>
 	<body>
 		<div id="controls">
-			<button id="up">+</button>
-			<button id="down">-</button>
-			<button id="stop">#</button>
+      <h3>Debug controls</h3>
+			<span>UP: <button id="up">+</button></span>
+			<span>DOWN: <button id="down">-</button></span>
+			<span>STOP: <button id="stop">#</button></span>
+      <span>      <button id="reset">Reset!</button></span>
 		</div>
 
 		<div id="videos">
