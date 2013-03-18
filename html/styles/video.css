@@ -13,3 +13,35 @@ video {
 #videos {
   position: relative;
 }
+
+#controls {
+  font-family: "Menlo", "Helvetica", sans-serif;
+  position: absolute;
+  top: 0;
+  width: auto;
+  z-index: 99999;
+  margin: 1em 0 0 1.5em;
+  padding: .8em;
+  border-radius: 5px;
+  background: rgba(228,130,0,0.8);
+}
+
+#controls *:not(button){
+  color: white;
+  font-variant: bold;
+}
+
+#controls span {
+  display: block;
+  position: relative;
+  width: 150px;
+  overflow:auto;
+}
+
+#controls span button {
+  float: right;
+}
+
+#controls span:last-child {
+  margin-top: 2em;
+}
