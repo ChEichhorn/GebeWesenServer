@@ -22,7 +22,7 @@
 
 				$('#container').find("#change,#continue").hide();
 				
-        var events = "pressed touchstart";
+        var events = "touchstart";
 
 				// starte die verbindung
 				initSocket("ipad", undefined, 'body');
@@ -52,14 +52,14 @@
 					$('#container').children().fadeOut(1000,function(){
             if ($(this).is('#start')) {
               $start.fadeIn(1000);
-              $('button').off("click touch").on(events,onClickTouch)
+              $('button').off(events).on(events,onClickTouch)
             }
           });
 				})
 				
 				$('body').on('ready',function(event){
   			  $changeAndContinue.fadeIn(1000,function(){
-            $('button').off("click touch").on(events,onClickTouch)
+            $('button').off(events).on(events,onClickTouch)
           });
 				})
 				
